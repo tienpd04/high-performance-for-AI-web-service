@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# docker compose down
+# source ~/miniconda3/bin/activate ENV_NAME
+mkdir -p /tmp/storage
+rm -rf /tmp/storage/*
+rm -rf logs/gunicorn-error.log
+export PYTHONPATH=.
+python src/main.py --env_file=.env.local

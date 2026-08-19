@@ -1,0 +1,24 @@
+services:
+  fastapi:
+    container_name: ai_fastapi
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    # entrypoint: ["/bin/bash", "/code/scripts/sleep-entrypoint.sh"]
+    restart: always
+    ports:
+      - 8000:8000
+    volumes:
+      - .:/code:rw
+      - ./logs:/code/logs:rw
+    env_file:
+      - .env
+    deploy:
+      replicas: 1
+    # logging:
+    #   driver: "journald"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
