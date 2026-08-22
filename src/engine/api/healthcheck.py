@@ -1,17 +1,17 @@
 
 
-from .common import PlainTextResponse, Request
+from .common import Response, Request
 
 
-def health_check(req: Request) -> PlainTextResponse:
+def health_check(req: Request) -> Response:
     '''
     Health Check API
 
     Return:
-    PlainTextResponse with message \"Health check successed\"
+    Response with status code 200
     '''
 
-    return PlainTextResponse("Health check successed")
+    return Response()
 
 __all__ = [
     "health_check",

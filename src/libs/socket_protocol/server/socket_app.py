@@ -8,8 +8,11 @@ from typing import Any, Callable, Dict
 # from ..client.requests import REQUEST_HEADER_SIZE, ClientRequest
 from ..protocol import (API_MAX, API_MIN, REQUEST_HEADER_SIZE,
                         unpack_request_header)
+
+from .. import sp_status_code
+
 from .request import Request
-from .response import JSONResponse, PlainTextResponse, Response
+from .response import JSONResponse, PlainTextResponse, Response, ASCIIPlainTextResponse
 
 RequestHandler = Callable[[Request], Response]
 
@@ -138,8 +141,8 @@ class SocketApplicaltion:
             document_list.append(doc_str)
         return "\n\n".join(document_list)
 
-    def run(self, raise_exception: bool = False):
-        server_sock = self._server_sock
+    def run(self, raise_exception: bool = False, log_traceback=True):
+        server_sock: socket.socket = self._server_sock
         logger = self._logger
         while True:
             try:
@@ -154,13 +157,16 @@ class SocketApplicaltion:
                 if logger is not None:
                     logger.warning(
                         "Disconnected from address: '%s'", str(address))
-            except Exception:
+            except Exception as e:
                 if raise_exception:
                     raise
                 else:
                     if logger is not None:
-                        logger.error(
-                            "Exception from Socket Application:\n%s", traceback.format_exc())
+                        if log_traceback:
+                            logger.error(
+                                "Exception from Socket Application:\n%s", traceback.format_exc())
+                        else:
+                            logger.error("Exception from Socket Application: %s", str(e))
 
     def _prepare_request(self, conn: SocketType, address) -> Request | None:
 
@@ -168,13 +174,13 @@ class SocketApplicaltion:
         try:
             api, content_type, content_len = unpack_request_header(data)
         except ValueError:
-            res = PlainTextResponse(
-                f"Request header required at least {REQUEST_HEADER_SIZE} bytes", status_code=400)
+            res = ASCIIPlainTextResponse(
+                f"Request header required at least {REQUEST_HEADER_SIZE} bytes", status_code=sp_status_code.SP_420_INVALID_HEADER)
             conn.sendall(res.data)
             return None
         if api not in self._api_handles:
-            res = PlainTextResponse(
-                f"Request not found with api: {api}", status_code=404)
+            res = ASCIIPlainTextResponse(
+                f"Request not found with api: {api}", status_code=sp_status_code.SP_404_REQUEST_NOT_FOUND)
             conn.sendall(res.data)
             return None
         content = data[REQUEST_HEADER_SIZE:]
@@ -184,8 +190,8 @@ class SocketApplicaltion:
             content += _recv_enough(conn, remaining_len)
 
         if len(content) != content_len:
-            res = PlainTextResponse(
-                f"Request content length error, expected {content_len}, got {len(content)}", status_code=400)
+            res = ASCIIPlainTextResponse(
+                f"Request content length error, expected {content_len}, got {len(content)}", status_code=sp_status_code.SP_421_CONTENT_LENGTH_ERROR)
             conn.sendall(res.data)
             return None
 

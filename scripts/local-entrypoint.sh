@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # docker compose down
-# source ~/miniconda3/bin/activate ENV_NAME
+# source ~/miniconda3/bin/activate ai
 mkdir -p /tmp/storage
 rm -rf /tmp/storage/*
 rm -rf logs/gunicorn-error.log

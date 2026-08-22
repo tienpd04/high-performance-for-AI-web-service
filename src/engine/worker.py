@@ -1,15 +1,19 @@
 
 import os
 import socket
+import sys
+import signal
 
 from src.engine.core.engine import Engine
 from src.engine.utils.logging import logger
 from src.libs.socket_protocol.server import SocketApplicaltion
 
+def _worker_signal_handler(signum, frame):
+        sys.exit(0)
 
 def create_engine():
 
-    return Engine(face_recog_model_path="weights/face_extraction.bin")
+    return Engine()
 
 def create_app(sock: socket.socket, engine: Engine) -> SocketApplicaltion:
     app = SocketApplicaltion(sock, logger=logger, timeout=None)
@@ -24,6 +28,8 @@ def create_app(sock: socket.socket, engine: Engine) -> SocketApplicaltion:
 
 def start_server_worker(sock: socket.socket, ready_event=None) -> None:
     """Start a simple server worker that listens on a Unix domain socket."""
+    signal.signal(signal.Signals.SIGINT, _worker_signal_handler)
+    signal.signal(signal.Signals.SIGTERM, _worker_signal_handler)
     pid = os.getpid()
     logger.info("Booting worker with pid: %d", pid)
     logger.info("Waiting for application startup.")

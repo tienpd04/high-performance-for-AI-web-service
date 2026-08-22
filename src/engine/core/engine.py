@@ -14,7 +14,7 @@ class InvalidModelName(ValueError):
 
 class Engine:
 
-    def __init__(self, face_recog_model_path):
+    def __init__(self):
         CPU_COUNT = os.cpu_count()
         # arc_face =
         self.face_recog_model = SingleInputOutputOnnxInference(ARC_FACE_MODEL_PATH, intra_op_num_threads=CPU_COUNT, inter_op_num_threads=2)

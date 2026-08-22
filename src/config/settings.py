@@ -38,7 +38,7 @@ WORKER_CONNECTIONS: int = _getenv(
 ERROR_LOG_FILE: str = _getenv(
     "ERROR_LOG_FILE", "logs/gunicorn-error.log")
 
-ACCESS_LOG_FILE: str = _getenv("ACCESS_LOG_FILE", "-")
+ACCESS_LOG_FILE: str | None = _getenv("ACCESS_LOG_FILE")
 
 LOG_LEVEL: _Literal['error', 'warning', 'info', 'debug'] = {k: k for k in ('error', 'warning', 'info', 'debug')}.get(
     _cast(str, _getenv("LOG_LEVEL", "info")).lower(), 'info')
@@ -48,9 +48,7 @@ LOG_LEVEL: _Literal['error', 'warning', 'info', 'debug'] = {k: k for k in ('erro
 STORAGE_DIR: str = _getenv("STORAGE_DIR", "/tmp/storage")
 
 
-ENGINE_UNIX_SOCKET_PATH: str | None = _getenv("ENGINE_UNIX_SOCKET_PATH") if _os.name == 'posix' else None
-
-ENGINE_SOCKET_PORT: int | None = _getenv("ENGINE_SOCKET_PORT", 4000, cast=int) if not ENGINE_UNIX_SOCKET_PATH else None
+ENGINE_UNIX_SOCKET_PATH: str = _getenv("ENGINE_UNIX_SOCKET_PATH", default="/tmp/ai-engine.sock", required=True)
 
 ENGINE_NUM_WORKERS: int = _getenv("ENGINE_NUM_WORKERS", 1, cast=int)
 

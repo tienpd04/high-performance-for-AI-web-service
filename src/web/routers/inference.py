@@ -1,6 +1,6 @@
 import time
 # from src.web.services.engine import inference
-import traceback
+# import traceback
 
 import numpy as np
 from fastapi import APIRouter, Request
@@ -18,7 +18,7 @@ async def inference_api(request: Request):
     try:
         response = face_recog(input_tensor)
     except Exception as e:
-        traceback.print_exc()
+        # traceback.print_exc()
         rq_log_error(request, f'inference failed: {e}')
         return JSONResponse(status_code=500, content={'success': False, 'message': f'Inference failed: {e}'})
     t2 = time.time()

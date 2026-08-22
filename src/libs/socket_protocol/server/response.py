@@ -36,6 +36,7 @@ class PlainTextResponse(Response):
 
 class JSONResponse(Response):
     content_type = ResponseContentType.JSON
+    ensure_ascii = False
 
     def __init__(
         self,
@@ -47,8 +48,15 @@ class JSONResponse(Response):
     def render(self, content: Any) -> bytes:
         return json.dumps(
             content,
-            ensure_ascii=False,
+            ensure_ascii=self.ensure_ascii,
             allow_nan=False,
             indent=None,
             separators=(",", ":"),
-        ).encode("utf-8")
+        ).encode(self.charset)
+
+class ASCIIPlainTextResponse(PlainTextResponse):
+    charset = 'ascii'
+
+class ASCIIJsonResponse(JSONResponse):
+    charset = 'ascii'
+    ensure_ascii = True

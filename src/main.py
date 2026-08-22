@@ -1,15 +1,10 @@
-import os
 import sys
 from multiprocessing.shared_memory import SharedMemory
 
 
 def _web_process():
-    if os.name == "nt":
-        from src.web.target import uvicorn_target
-        uvicorn_target()
-    else:
-        from src.web.target import gunicorn_target
-        gunicorn_target()
+    from src.web.target import web_target
+    web_target()
 
 
 def _engine_process(ready_event=None):
@@ -53,8 +48,8 @@ def _create_resources() -> tuple[list, dict[str, int]]:
 
     RESOURCE_NUM_SHM = RESOURCE_NUM_SHM_PER_WORKER * (NUM_WORKERS + 2) # backup more 2 for sometime web worker crash
     shm_list: list[SharedMemory] = []
-    for _ in range(RESOURCE_NUM_SHM):
-        shm = SharedMemory(create=True, size=RESOURCE_SHM_SIZE_MB * 1024 * 1024)
+    for i in range(RESOURCE_NUM_SHM):
+        shm = SharedMemory(name=f"Shm_{i:02d}", create=True, size=RESOURCE_SHM_SIZE_MB * 1024 * 1024)
         shm_list.append(shm)
     _logger.info("Created %d shared memory with each size %d MB", RESOURCE_NUM_SHM, RESOURCE_SHM_SIZE_MB)
     resources = {k.name: k.size for k in shm_list}

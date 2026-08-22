@@ -5,12 +5,14 @@ from types import MappingProxyType
 
 class _ResourcesManager:
     _resources: MappingProxyType[str, int]
-    _usage_time_limit: int | float
+    _usage_time_limit: int | float | None
     _last_use_times: dict[str, float]
     _maxsize: int
 
     def __init__(self, resources: dict[str, int], usage_time_limit=180):
         self._resources = MappingProxyType(resources)
+        if usage_time_limit is not None and usage_time_limit <= 0:
+            usage_time_limit = None
         self._usage_time_limit = usage_time_limit
         self._last_use_times = {}
         self._maxsize = max(self._resources.values())
@@ -26,7 +28,7 @@ class _ResourcesManager:
         if sorted_req_sizes[-1] > self._maxsize:
             return None
 
-        sorted_resources = []
+        sorted_resources: list[tuple[str, int]] = []
 
         avaiable = [(k, v) for k, v in self._resources.items(
         ) if k not in self._last_use_times and sorted_req_sizes[0] <= v]
@@ -90,6 +92,8 @@ class _ResourcesManager:
         return ret
 
     def overdue(self, now: float = None) -> list[tuple[str, float]]:
+        if not self._usage_time_limit:
+            return []
         if now is None:
             now = time.time()
         ret = []

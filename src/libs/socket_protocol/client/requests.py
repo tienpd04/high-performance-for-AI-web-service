@@ -42,6 +42,7 @@ class PlainTextRequest(ClientRequest):
 
 class JSONRequest(ClientRequest):
     content_type = RequestContentType.JSON
+    ensure_ascii = False
 
     def __init__(
         self,
@@ -54,11 +55,18 @@ class JSONRequest(ClientRequest):
     def render(self, content: Any) -> bytes:
         return json.dumps(
             content,
-            ensure_ascii=False,
+            ensure_ascii=self.ensure_ascii,
             allow_nan=False,
             indent=None,
             separators=(",", ":"),
-        ).encode("utf-8")
+        ).encode(self.charset)
+
+class ASCIIPlainTextRequest(PlainTextRequest):
+    charset = 'ascii'
+
+class ASCIIJSONRequest(JSONRequest):
+    charset = 'ascii'
+    ensure_ascii = True
 
 
 class Response:
@@ -82,6 +90,13 @@ class Response:
         except Exception:
             raise ContentDecodingError("Failed to decode content as text")
 
+    @property
+    def ascii_text(self) -> str:
+        try:
+            return self.content.decode('ascii')
+        except Exception:
+            raise ContentDecodingError("Failed to decode content as ASCII text")
+
     def json(self) -> Any:
         try:
             return json.loads(self.content)
@@ -99,7 +114,7 @@ class Response:
 
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
-            raise StatusCodeError(f"Status code = {self.status_code}")
+            raise StatusCodeError(self.status_code, f"Status code = {self.status_code}")
 
 
 def _recv_enough(sock: socket.socket, size: int) -> bytes:
@@ -122,6 +137,7 @@ def request(
     address_family: int = socket.AF_INET,
     socket_kind: int = socket.SOCK_STREAM,
     timeout: float = None,
+    ensure_ascii: bool = False,
     first_rcv_size: int = 65536,
 
 ) -> Response:
@@ -130,14 +146,14 @@ def request(
     if data is None or isinstance(data, bytes | memoryview):
         req = ClientRequest(api, data)
     elif isinstance(data, str):
-        req = PlainTextRequest(api, data)
+        req = PlainTextRequest(api, data) if not ensure_ascii else ASCIIPlainTextRequest(api, data)
     else:
-        req = JSONRequest(api, data)
+        req = JSONRequest(api, data) if not ensure_ascii else ASCIIJSONRequest(api, data)
     try:
         req_data = req.pack()
     except Exception as e:
         raise ContentEncodingError(
-            "'data' must be a bytes, memoryview, str or jsonable data type") from e
+            f"'data' must be a bytes, memoryview, str or jsonable data type with encoding charset {'ascii' if ensure_ascii else 'utf-8'}") from e
 
     with socket.socket(address_family, socket_kind) as client:
         try:

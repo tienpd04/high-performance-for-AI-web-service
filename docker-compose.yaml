@@ -1,6 +1,6 @@
 services:
   fastapi:
-    container_name: ai_fastapi
+    container_name: ai-fastapi
     build:
       context: .
       dockerfile: ./docker/Dockerfile
@@ -15,8 +15,12 @@ services:
       - .env
     deploy:
       replicas: 1
-    # logging:
-    #   driver: "journald"
+      resources:
+        limits:
+          cpus: 12
+      #     memory: 4G
+    logging:
+      driver: "journald"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 30s

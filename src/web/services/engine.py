@@ -52,7 +52,6 @@ def _load_outputs(response_dict: dict) -> list[NDArray]:
     outputs: list | dict = response_dict.get("outputs")
 
     if mode == "shm":
-        # shm_size = tensor_info.get("shm_size")
         list_outputs: list[NDArray] = []
         for tensor_info in outputs:
             tensor_schema = ShmTensorSchema(**tensor_info)
@@ -89,7 +88,7 @@ def _inference_from_file(model_name: str, tensor_file_path: str, timeout=10) -> 
         try:
             msg = res.text
         except Exception:
-            msg = str(e)
+            msg = ''
         raise RequestException(f"Request failed with status code {res.status_code}: {msg}") from e
     except Exception as e:
         logger.error(
@@ -110,7 +109,7 @@ def inference(model_name: str, input_tensor: NDArray, timeout=None) -> list[NDAr
 
     if not shms:
         logger.warning("Failed to acquire shared memory with size %d, try request to engine with 'file' mode", input_tensor.nbytes)
-        file_path = os.path.join(STORAGE_DIR, _genegate_filestem() + ".npy")
+        file_path = os.path.join(STORAGE_DIR, secrets.token_hex(16) + ".npy")
         np.save(file_path, input_tensor)
         try:
             return _inference_from_file(model_name, file_path, timeout=timeout)
@@ -126,17 +125,23 @@ def inference(model_name: str, input_tensor: NDArray, timeout=None) -> list[NDAr
             array = np.ndarray(shape=input_tensor.shape,
                             dtype=input_tensor.dtype, buffer=shm.buf)
             array[:] = input_tensor[:]
-            tensor_content = ShmTensorSchema(shape=[int(x) for x in input_tensor.shape], dtype=input_tensor.dtype.name, shm=shm.name).to_dict()
+            tensor_content = ShmTensorSchema(shape=input_tensor.shape, dtype=input_tensor.dtype.name, shm=shm.name).origin_dict()
             content = {'model_name': model_name, 'input_tensor': tensor_content, 'mode': 'shm'}
 
             res = request(ADDRESS, SocketAPI.INFERENCE, data=content,
-                        address_family=SOCKET_FAMILY, socket_kind=SOCKET_KIND, timeout=timeout)
+                        address_family=SOCKET_FAMILY, socket_kind=SOCKET_KIND, timeout=timeout, ensure_ascii=True)
             res.raise_for_status()
             response_dict = res.json()
             assert isinstance(
                 response_dict, dict), "Content return must be a dict"
             outputs = _load_outputs(response_dict)
             return outputs
+        except StatusCodeError as e:
+                try:
+                    msg = res.text
+                except Exception:
+                    msg = ''
+                raise RequestException(f"Request failed with status code {res.status_code}: {msg}") from e
         finally:
             release(shms)
 
